@@ -1,0 +1,240 @@
+using namespace std;
+
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <vector>
+#include <algorithm>
+#include <locale>
+
+class Book {
+private:
+    std::string title;   // Название книги
+    std::string author;  // Автор книги
+    int year;            // Год выпуска
+    std::string url;     // URL книги
+
+    // Вектор для хранения массива книг
+    static std::vector<Book> books;
+
+public:
+    // Конструктор с параметрами (значения по умолчанию для удобства)
+    Book(const std::string& title = "", const std::string& author = "", int year = 0, const std::string& url = "")
+        : title(title), author(author), year(year), url(url) {}
+
+    // Метод для чтения данных о книге
+    void read() {
+        std::cout << "Введите название книги: ";
+        std::cin.ignore(); // Игнорируем оставшийся ввод
+        std::getline(std::cin, title);
+
+        std::cout << "Введите автора книги: ";
+        std::getline(std::cin, author);
+
+        std::cout << "Введите год выпуска: ";
+        while (!(std::cin >> year) || year < 0) {
+            std::cout << "Неверный год. Повторите ввод: ";
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+        std::cin.ignore(); // Очистка оставшегося ввода
+
+        std::cout << "Введите URL книги: ";
+        std::getline(std::cin, url);
+    }
+
+    // Метод для отображения информации о книге
+    void display() const {
+        std::cout << "Название: " << title << "\n"
+                  << "Автор: " << author << "\n"
+                  << "Год выпуска: " << year << "\n"
+                  << "URL: " << url << "\n";
+    }
+
+    // Добавление книги в массив
+    static void addBook() {
+        Book newBook;
+        newBook.read();
+        books.push_back(newBook);
+        saveBooksToFile();
+    }
+
+    // Удаление книги
+    static void removeBook(size_t index) {
+        if (index < books.size()) {
+            books.erase(books.begin() + index);
+            std::cout << "Книга успешно удалена.\n";
+            saveBooksToFile();
+        } else {
+            std::cout << "Неверный индекс. Книга не удалена.\n";
+        }
+    }
+
+    // Отображение всех книг с индексами
+    static void displayBooks() {
+        if (books.empty()) {
+            std::cout << "Список книг пуст.\n";
+        } else {
+            for (size_t i = 0; i < books.size(); ++i) {
+                std::cout << "Индекс " << i << ": \n";
+                books[i].display();
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    // Загрузка книг из файла
+    static void loadBooksFromFile() {
+        std::ifstream file("books_database.txt", std::ios::binary);
+        if (!file) {
+            std::cout << "Файл базы данных не найден. Создаётся новый список.\n";
+            return;
+        }
+
+        books.clear();
+        std::string title, author, url;
+        int year;
+
+        while (std::getline(file, title)) {
+            std::getline(file, author);
+            file >> year;
+            file.ignore(); // Пропустить символ новой строки
+            std::getline(file, url);
+            books.emplace_back(title, author, year, url);
+        }
+    }
+
+    // Сохранение книг в файл
+    static void saveBooksToFile() {
+        std::ofstream file("books_database.txt", std::ios::binary | std::ios::trunc);
+        if (!file.is_open()) {
+            std::cerr << "Ошибка: не удалось открыть файл для записи.\n";
+            return;
+        }
+
+        for (const auto& book : books) {
+            file << book.title << "\n"
+                 << book.author << "\n"
+                 << book.year << "\n"
+                 << book.url << "\n";
+        }
+    }
+
+        // Функция поиска
+    static void searchBooks() {
+        if (books.empty()) {
+            std::cout << "Список книг пуст. Поиск невозможен.\n";
+            return;
+        }
+
+        int choice;
+        std::cout << "Поиск книг:\n";
+        std::cout << "1. По автору\n";
+        std::cout << "2. По названию книги\n";
+        std::cout << "3. По году выпуска\n";
+        std::cout << "Выберите критерий поиска: ";
+        std::cin >> choice;
+
+        std::cin.ignore(); // Очистка ввода
+        std::string searchString;
+        int searchYear;
+        std::vector<size_t> results;
+
+        switch (choice) {
+        case 1:
+            std::cout << "Введите автора для поиска: ";
+            std::getline(std::cin, searchString);
+            for (size_t i = 0; i < books.size(); ++i) {
+                if (books[i].author == searchString) {
+                    results.push_back(i);
+                }
+            }
+            break;
+        case 2:
+            std::cout << "Введите название книги для поиска: ";
+            std::getline(std::cin, searchString);
+            for (size_t i = 0; i < books.size(); ++i) {
+                if (books[i].title == searchString) {
+                    results.push_back(i);
+                }
+            }
+            break;
+        case 3:
+            std::cout << "Введите год выпуска для поиска: ";
+            std::cin >> searchYear;
+            for (size_t i = 0; i < books.size(); ++i) {
+                if (books[i].year == searchYear) {
+                    results.push_back(i);
+                }
+            }
+            break;
+        default:
+            std::cout << "Неверный выбор.\n";
+            return;
+        }
+
+        if (results.empty()) {
+            std::cout << "Книг, соответствующих критериям поиска, не найдено.\n";
+        } else {
+            std::cout << "Найдено " << results.size() << " результат(ов):\n";
+            for (size_t index : results) {
+                std::cout << "Индекс " << index << ":\n";
+                books[index].display();
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    // Меню для взаимодействия с пользователем
+    static void menu() {
+        loadBooksFromFile(); // Загрузка книг из базы данных
+
+        int choice = 0;
+
+        while (choice != 5) {
+            std::cout << "\nМеню:\n";
+            std::cout << "1. Добавить книгу\n";
+            std::cout << "2. Удалить книгу\n";
+            std::cout << "3. Показать все книги\n";
+            std::cout << "4. Поиск книги\n";
+            std::cout << "5. Выход\n";
+            std::cout << "Введите ваш выбор: ";
+            std::cin >> choice;
+
+            switch (choice) {
+            case 1:
+                addBook();
+                break;
+            case 2:
+                std::cout << "Введите индекс книги для удаления: ";
+                size_t index;
+                std::cin >> index;
+                removeBook(index);
+                break;
+            case 3:
+                displayBooks();
+                break;
+            case 4:
+                searchBooks();
+                break;
+            case 5:
+                std::cout << "Выход из программы.\n";
+                break;
+            default:
+                std::cout << "Неверный выбор. Повторите попытку.\n";
+            }
+        }
+    }
+};
+
+// Инициализация статической переменной
+std::vector<Book> Book::books;
+
+int main()
+{
+   // setlocale(LC_ALL, "Russian");
+    Book library; // Объект для работы с книгами
+    library.menu(); // Запуск интерфейса пользователя
+
+    return 0;
+}
